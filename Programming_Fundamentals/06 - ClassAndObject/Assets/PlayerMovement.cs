@@ -1,10 +1,6 @@
-using JetBrains.Annotations;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : ProcessingLite.GP21
 {
 
     [SerializeField] GameObject playerObject;

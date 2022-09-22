@@ -3,33 +3,34 @@ using System.Collections.Generic;
 using UnityEngine;
 
 //We still need to inherence from ProcessingLite
-public class Ball : MonoBehaviour
+public class Ball : ProcessingLite.GP21
 {
     //Our class variables
     Vector2 velocity; //Ball direction
-    Camera cam;
+    Vector2 position;
+    int r;
+    int g;
+    int b;
     float size;
 
     //Ball Constructor, called when we type new Ball(x, y);
-    public void CreateBall(float x, float y)
+    public Ball(Vector2 playerPos)
     {
-        //Create the velocity vector and give it a random direction.
+        position = GenerateValidSpawnPosition(playerPos);
         velocity = new Vector2();
         velocity.x = Random.Range(0f, 11f) - 5;
         velocity.y = Random.Range(0f, 11f) - 5;
-        float r = Random.Range(0f,1f);
-        float g = Random.Range(0f,1f);
-        float b = Random.Range(0f,1f);
-        int a = 1;
+        r = Random.Range(0,256);
+        g = Random.Range(0,256);
+        b = Random.Range(0,256);
         size = Random.Range(0.3f,0.8f);
-        this.gameObject.transform.localScale = new Vector3(size,size,1);
-        this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r,g,b,a);
-        cam = Camera.main;
     }
-    private void Start()
+
+    public void Draw()
     {
-        CreateBall(0,0); 
-    }   
+        Stroke(r,g,b);
+        Circle(position.x, position.y, size * 2);
+    }
 
     private void Update()
     {
@@ -37,33 +38,66 @@ public class Ball : MonoBehaviour
         BouceWallDetection();
     }
 
+    public Vector2 GenerateValidSpawnPosition(Vector2 playerPos)
+    {
+        int attemptsMade = 0;
+        float safetyDistance = 3;
+        Vector2 attemptedPos = new Vector2(Random.Range(0f, Width), Random.Range(0, Height));
+        while ((playerPos - attemptedPos).sqrMagnitude < safetyDistance)
+        {
+            attemptedPos = new Vector2(Random.Range(0f, Width), Random.Range(0, Height));
+            attemptsMade++;
+            if (attemptsMade > 100)
+            {
+                return new Vector2(-1, -1);
+            }
+        }
+        return attemptedPos;
+    }
+
+    public Vector2 GenerateValidSpawnPosition(Vector2 playerPos, float safetyDistance)
+    {
+        int attemptsMade = 0;
+        Vector2 attemptedPos = new Vector2(Random.Range(0f, Width), Random.Range(0, Height));
+        while ((playerPos-attemptedPos).sqrMagnitude < safetyDistance)
+        {
+            attemptedPos = new Vector2(Random.Range(0f, Width), Random.Range(0, Height));
+            attemptsMade++;
+            if(attemptsMade > 100)
+            {
+                return new Vector2(-1,-1);
+            }
+        }
+        return attemptedPos;
+    }
+
     //Update our ball
     public void UpdatePos()
     {
-        this.gameObject.transform.position += (Vector3)velocity * Time.deltaTime;
+        position += velocity * Time.deltaTime;
     }
 
     private void BouceWallDetection()
     {
-        if (this.gameObject.transform.position.y + cam.orthographicSize < 0)
+        if (position.y + Height < 0)
         {
-            this.gameObject.transform.position = new Vector3(this.gameObject.transform.position.x, cam.orthographicSize * -1f, 0);
+            position = new Vector3(position.x, Height * -1f, 0);
             velocity.y *= -1f;
         }
-        else if (this.gameObject.transform.position.y > cam.orthographicSize)
+        else if (position.y > Height)
         {
-            this.gameObject.transform.position = new Vector3(this.gameObject.transform.position.x, cam.orthographicSize, 0);
+            position = new Vector3(position.x, Height, 0);
             velocity.y *= -1f;
         }
 
-        if (this.gameObject.transform.position.x + (cam.orthographicSize*cam.aspect) < 0)
+        if (position.x + (Width) < 0)
         {
-            this.gameObject.transform.position = new Vector3(cam.orthographicSize * cam.aspect * -1f,this.gameObject.transform.position.y, 0);
+            position = new Vector3(Width * -1f,position.y, 0);
             velocity.x *= -1f;
         }
-        else if (this.gameObject.transform.position.x > cam.orthographicSize * cam.aspect)
+        else if (position.x > Width)
         {
-            this.gameObject.transform.position = new Vector3(cam.orthographicSize * cam.aspect, this.gameObject.transform.position.y, 0);
+            position = new Vector3(Width, position.y, 0);
             velocity.x *= -1f;
         }
     }

@@ -30,6 +30,7 @@ public class GameManager : MonoBehaviour
 
     private void SpawnBall()
     {
+        balls.Add(new Ball());
         GameObject ballObject = Instantiate(ballPrefab);
         balls.Add(ballObject.GetComponent<Ball>());
     }
