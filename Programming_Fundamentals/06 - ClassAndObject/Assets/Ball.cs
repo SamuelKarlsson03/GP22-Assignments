@@ -1,19 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-//We still need to inherence from ProcessingLite
 public class Ball : ProcessingLite.GP21
 {
-    //Our class variables
-    Vector2 velocity; //Ball direction
+    Vector2 velocity;
     Vector2 position;
     int r;
     int g;
     int b;
     float size;
 
-    //Ball Constructor, called when we type new Ball(x, y);
     public Ball(Vector2 playerPos)
     {
         position = GenerateValidSpawnPosition(playerPos);
@@ -30,12 +25,6 @@ public class Ball : ProcessingLite.GP21
     {
         Stroke(r,g,b);
         Circle(position.x, position.y, size * 2);
-    }
-
-    private void Update()
-    {
-        UpdatePos();
-        BouceWallDetection();
     }
 
     public Vector2 GenerateValidSpawnPosition(Vector2 playerPos)
@@ -71,34 +60,44 @@ public class Ball : ProcessingLite.GP21
         return attemptedPos;
     }
 
-    //Update our ball
     public void UpdatePos()
     {
         position += velocity * Time.deltaTime;
+        BouceWallDetection();
     }
 
     private void BouceWallDetection()
     {
-        if (position.y + Height < 0)
+        if (position.y < size)
         {
-            position = new Vector3(position.x, Height * -1f, 0);
+            position = new Vector3(position.x, size);
             velocity.y *= -1f;
         }
-        else if (position.y > Height)
+        else if (position.y > Height-size)
         {
-            position = new Vector3(position.x, Height, 0);
+            position = new Vector3(position.x, Height-size);
             velocity.y *= -1f;
         }
 
-        if (position.x + (Width) < 0)
+        if (position.x < size)
         {
-            position = new Vector3(Width * -1f,position.y, 0);
+            position = new Vector3(size,position.y);
             velocity.x *= -1f;
         }
-        else if (position.x > Width)
+        else if (position.x > Width-size)
         {
-            position = new Vector3(Width, position.y, 0);
+            position = new Vector3(Width-size, position.y);
             velocity.x *= -1f;
         }
+    }
+
+    public Vector2 GetPosition()
+    {
+        return position;
+    }
+
+    public float GetBallSize()
+    {
+        return size;
     }
 }

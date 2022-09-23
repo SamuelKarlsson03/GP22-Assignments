@@ -2,50 +2,50 @@ using UnityEngine;
 
 public class PlayerMovement : ProcessingLite.GP21
 {
-
-    [SerializeField] GameObject playerObject;
-    private GameObject phantomObject;
     [SerializeField] float maxSpeed = 50f;
     [SerializeField] float normalSpeed = 5f;
     [SerializeField] float acceleration = 40f;
     [SerializeField] float deceleration = 20f;
     [SerializeField] float gravity = 9.8f;
-    [Range(0, 1)]
     [SerializeField] float bouceyness = 0.8f;
-    private Camera cam;
+    [SerializeField] bool useAcceleration = true;
+
     private float currentXVel;
     private float currentYVel;
     private bool gravityOn;
-    [SerializeField] bool useAcceleration = true;
 
-    // Start is called before the first frame update
-    void Start()
+    float width;
+    float height;
+    float playerSize = 1;
+
+    private void Start()
     {
-        playerObject = this.gameObject;
-        phantomObject = Instantiate(playerObject);
-        Destroy(phantomObject.GetComponent<PlayerMovement>());
-        cam = Camera.main;
+        width = Width;
+        height = Height;
     }
 
-    // Update is called once per frame
-    void Update()
+    public void SetPlayerSize(float size)
+    {
+        playerSize = size;
+    }
+
+    public Vector2 UpdateMovemnet(Vector2 pos)
     {
         float x = Input.GetAxisRaw("Horizontal");
         float y = Input.GetAxisRaw("Vertical");
         Vector2 normalized = new Vector2(x, y).normalized;
         x = normalized.x;
         y = normalized.y;
-
         Decelerate(x,y);
 
         if (!useAcceleration)
         {
-            playerObject.transform.position += new Vector3(x*Time.deltaTime*normalSpeed,y*Time.deltaTime*normalSpeed,0);
+            pos += new Vector2(x*Time.deltaTime*normalSpeed,y*Time.deltaTime*normalSpeed);
         }
         else
         {
             UpdateVelocity(x,y);
-            Move();
+            pos += new Vector2(currentXVel * Time.deltaTime, currentYVel * Time.deltaTime);
         }
 
         if (Input.GetKeyDown(KeyCode.G))
@@ -58,9 +58,9 @@ public class PlayerMovement : ProcessingLite.GP21
             UpdateGravity();
         }
 
-        ClampYPosition();
-        WrapXPosition();
-        UpdatePhantomPosition();
+        pos = ClampYPosition(pos);
+        pos = WrapXPosition(pos);
+        return pos;
     }
 
     private void Decelerate(float x, float y)
@@ -81,11 +81,6 @@ public class PlayerMovement : ProcessingLite.GP21
         currentYVel = Mathf.Clamp(currentYVel + (y * Time.deltaTime * acceleration), -1f * maxSpeed, maxSpeed);
     }
 
-    private void Move()
-    {
-        playerObject.transform.position += new Vector3(currentXVel * Time.deltaTime, currentYVel * Time.deltaTime, 0);
-    }
-
     private void ToggleGravity()
     {
         gravityOn = !gravityOn;
@@ -96,42 +91,31 @@ public class PlayerMovement : ProcessingLite.GP21
         currentYVel -= gravity * Time.deltaTime;
     }
 
-    private void ClampYPosition()
+    private Vector2 ClampYPosition(Vector2 pos)
     {
-        if (playerObject.transform.position.y + cam.orthographicSize < 0)
+        if (pos.y < playerSize)
         {
-            playerObject.transform.position = new Vector3(playerObject.transform.position.x, cam.orthographicSize * -1f, 0);
+            pos = new Vector3(pos.x, playerSize, 0);
             currentYVel *= -1f * bouceyness;
         }
-        if (playerObject.transform.position.y > cam.orthographicSize)
+        if (pos.y > height-playerSize)
         {
-            playerObject.transform.position = new Vector3(playerObject.transform.position.x, cam.orthographicSize, 0);
+            pos = new Vector3(pos.x, height-playerSize, 0);
             currentYVel *= -1f * bouceyness;
         }
+        return pos;
     }
 
-    private void WrapXPosition()
+    private Vector2 WrapXPosition(Vector2 pos)
     {
-        while (playerObject.transform.position.x + (cam.orthographicSize * cam.aspect) < 0)
+        while (pos.x < 0)
         {
-            playerObject.transform.position = new Vector3(playerObject.transform.position.x + cam.orthographicSize * cam.aspect * 2, playerObject.transform.position.y, 0);
+            pos += new Vector2(Width, 0);
         }
-        while (playerObject.transform.position.x > cam.aspect * cam.orthographicSize)
+        while (pos.x > width)
         {
-            playerObject.transform.position = new Vector3(playerObject.transform.position.x - cam.orthographicSize * cam.aspect * 2, playerObject.transform.position.y, 0);
+            pos -= new Vector2(Width, 0);
         }
-    }
-
-    private void UpdatePhantomPosition()
-    {
-        if (playerObject.transform.position.x < 0)
-        {
-            phantomObject.transform.position = new Vector3(playerObject.transform.position.x + (cam.orthographicSize * cam.aspect * 2), playerObject.transform.position.y, 0);
-        }
-        else
-        {
-            phantomObject.transform.position = new Vector3(playerObject.transform.position.x - (cam.orthographicSize * cam.aspect * 2), playerObject.transform.position.y, 0);
-
-        }
+        return pos;
     }
 }
