@@ -87,30 +87,29 @@ public class SamKar : IRandomWalker
 		if (hasInitializedHolder)
 		{
 			Vector2 closestEnemy = GetPosOfClosestEnemy();
-			float scaredDistance = 5;
+			float scaredDistance = 2;
 			float leftScore = visited[VisitedIndex(currentPos + new Vector2(-1, 0))];
 			if (Vector2.Distance(closestEnemy, currentPos) > Vector2.Distance(closestEnemy, currentPos + new Vector2(-1, 0)))
 			{
-				leftScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Vector2.Distance(closestEnemy, currentPos + new Vector2(-1, 0))), scaredDistance)-1;
+				leftScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Mathf.Max(Vector2.Distance(closestEnemy, currentPos + new Vector2(-1, 0)),0.001f)), scaredDistance)-1;
 			}
 			float rightScore = visited[VisitedIndex(currentPos + new Vector2(1, 0))];
 			if (Vector2.Distance(closestEnemy, currentPos) > Vector2.Distance(closestEnemy, currentPos + new Vector2(1, 0)))
 			{
-				rightScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Vector2.Distance(closestEnemy, currentPos + new Vector2(1, 0))), scaredDistance)-1;
+				rightScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Mathf.Max(Vector2.Distance(closestEnemy, currentPos + new Vector2(1, 0)),0.001f)), scaredDistance)-1;
 			}
 			float upScore = visited[VisitedIndex(currentPos + new Vector2(0, 1))];
 			if (Vector2.Distance(closestEnemy, currentPos) > Vector2.Distance(closestEnemy, currentPos + new Vector2(0, 1)))
 			{
-				upScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Vector2.Distance(closestEnemy, currentPos + new Vector2(0, 1))), scaredDistance)-1;
+				upScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Mathf.Max(Vector2.Distance(closestEnemy, currentPos + new Vector2(0, 1)),0.001f)), scaredDistance)-1;
 			}
 			float downScore = visited[VisitedIndex(currentPos + new Vector2(0, -1))];
 			if (Vector2.Distance(closestEnemy, currentPos) > Vector2.Distance(closestEnemy, currentPos + new Vector2(0, -1)))
 			{
-				downScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Vector2.Distance(closestEnemy, currentPos + new Vector2(0, -1))), scaredDistance)-1;
+				downScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Mathf.Max(Vector2.Distance(closestEnemy, currentPos + new Vector2(0, -1)),0.001f)), scaredDistance)-1;
 			}
 
 			float[] scores = new float[] { leftScore, rightScore, upScore, downScore };
-			Debug.Log($"left:{leftScore} right{rightScore} up{upScore} down{downScore}");
 			int largest = FindLargestInArray(scores);
 			switch (largest)
 			{
@@ -130,15 +129,20 @@ public class SamKar : IRandomWalker
 		}
 		float value;
 		int attempts = 0;
-		while ((currentPos + move).x < 0 || (currentPos + move).x > width || (currentPos + move).y < 0 || (currentPos + move).y > height || visited[VisitedIndex((currentPos + move).x, (currentPos + move).y)] < 0)
-		{
-			attempts++;
-			if (attempts >= 100)
-			{
-				GetNewPath();
-				move = StepTowardsPathDestination();
-				break;
-			}
+		Vector2 enemyPos = Vector2.zero;
+		if(hasInitializedHolder)
+        {
+			enemyPos = GetPosOfClosestEnemy();
+        }
+        while ((currentPos + move).x < 0 || (currentPos + move).x > width || (currentPos + move).y < 0 || (currentPos + move).y > height || visited[VisitedIndex((currentPos + move).x, (currentPos + move).y)] < 0 || Vector2.Distance(enemyPos, currentPos + move) < 2)
+        {
+            attempts++;
+            if (attempts >= 100)
+            {
+                GetNewPath();
+                move = StepTowardsPathDestination();
+                break;
+            }
             value = Random.Range(0, 4);
 
             if (value == 0)
@@ -158,12 +162,11 @@ public class SamKar : IRandomWalker
                 move = new Vector2(0, -1);
             }
         }
-		//while(((currentPos + move).x < 0 || (currentPos + move).x > width || (currentPos + move).y < 0 || (currentPos + move).y > height)
-		if(hasInitializedHolder)
+        //while(((currentPos + move).x < 0 || (currentPos + move).x > width || (currentPos + move).y < 0 || (currentPos + move).y > height)
+        if (hasInitializedHolder)
 		{
 			GetObjectsInHolder();
 		}
-		Debug.Log(TilesOwned());
 		UpdateDirValues(move);
 		return move;
 	}
@@ -208,6 +211,11 @@ public class SamKar : IRandomWalker
 	private Vector2 StepTowardsPathDestination()
     {
 		Vector2 pathMovement = Vector2.zero;
+		Vector2 enemyPos = Vector2.zero;
+		if(hasInitializedHolder)
+        {
+			enemyPos = GetPosOfClosestEnemy();
+        }
 		if (currentPos.x > pathPosition.x)
 		{
 			pathMovement = new Vector2(-1, 0);
@@ -224,6 +232,39 @@ public class SamKar : IRandomWalker
 		{
 			pathMovement = new Vector2(0, 1);
 		}
+		int counter = 0;
+		while(Vector2.Distance(currentPos + pathMovement,enemyPos) < 2)
+        {
+			float value = Random.Range(0, 4);
+			counter++;
+			if(counter >= 4)
+            {
+				GetNewPath();
+				break;
+            }
+
+			if (value == 0)
+			{
+				pathMovement = new Vector2(1, 0);
+			}
+			else if (value == 1)
+			{
+				pathMovement = new Vector2(-1, 0);
+			}
+			else if (value == 2)
+			{
+				pathMovement = new Vector2(0, 1);
+			}
+			else if (value == 3)
+			{
+				pathMovement = new Vector2(0, -1);
+			}
+		}
+		if(currentPos + pathMovement == enemyPos)
+        {
+			pathMovement *= -1;
+			Debug.Log("Reversed and maybe saved");
+        }
 		
 		if((currentPos + pathMovement) == pathPosition)
         {
@@ -288,7 +329,6 @@ public class SamKar : IRandomWalker
 			}
 			if(foundScale)
 			{
-				Debug.Log("Scale " + holderScale);
 				break;
 			}
 		}

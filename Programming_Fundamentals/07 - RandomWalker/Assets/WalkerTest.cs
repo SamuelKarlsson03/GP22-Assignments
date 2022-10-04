@@ -10,7 +10,8 @@ public class WalkerTest : ProcessingLite.GP21
 	List<IRandomWalker> walkers;
 	List<Vector2> walkerPos;
 	List<Vector3> walkerColors;
-	float scaleFactor = 0.1f;
+	float scaleFactor = 0.02f;
+	List<bool> walkerAlive;
 
 	void Start()
 	{
@@ -20,6 +21,7 @@ public class WalkerTest : ProcessingLite.GP21
 		walkers = new List<IRandomWalker>();
 		walkerPos = new List<Vector2>();
 		walkerColors = new List<Vector3>();
+		walkerAlive = new List<bool>();
 		//Create a walker from the class Example it has the type of WalkerInterface
 		//walkerColors.Add(new Vector3(Random.Range(128, 255), Random.Range(128, 255), Random.Range(128, 255)));
 
@@ -27,14 +29,16 @@ public class WalkerTest : ProcessingLite.GP21
 		{
 			walkers.Add(new SamKar());
 			//walkerColors.Add(new Vector3(Random.Range(128, 255), Random.Range(128, 255), Random.Range(128, 255)));
-			walkerColors.Add(new Vector3(255, 0, 0));
+			walkerColors.Add(new Vector3(100+15*i, 0, 0));
+			walkerAlive.Add(true);
 		}
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 200; i++)
         {
             walkers.Add(new Example());
             //walkerColors.Add(new Vector3(Random.Range(128, 255), Random.Range(128, 255), Random.Range(128, 255)));
             walkerColors.Add(new Vector3(0, 255, 0));
-        }
+			walkerAlive.Add(false);
+		}
         //walkers.Add(new Example());
         //walkerColors.Add(new Vector3(0, 255, 0));
         //walkers.Add(new SamKar());
@@ -59,7 +63,23 @@ public class WalkerTest : ProcessingLite.GP21
 			//Get the new movement from the walker.
 			for (int i = 0; i < walkers.Count; i++)
 			{
-				walkerPos[i] += walkers[i].Movement();
+				if(walkerAlive[i])
+                {
+					walkerPos[i] += walkers[i].Movement();
+                }
+				for(int j = 0; j < walkers.Count; j++)
+                {
+					if(i != j)
+                    {
+						if(walkerPos[i] == walkerPos[j])
+                        {
+							walkerColors[i] = new Vector3(0,0,0);
+							walkerColors[j] = new Vector3(0,0,0);
+							walkerAlive[i] = false;
+							walkerAlive[j] = false;
+						}
+                    }
+                }
 			}
 		}
 	}
