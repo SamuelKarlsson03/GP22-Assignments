@@ -1,3 +1,4 @@
+using Microsoft.Unity.VisualStudio.Editor;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,12 +9,25 @@ public class SamKar : IRandomWalker
 	int width;
 	int height;
 
-	bool[] visited;
+	int[] visited;
 	int leftValue;
 	int rightValue;
 	int upValue;
 	int downValue;
 	int totalVisits;
+
+	int leftMoves;
+	int rightMoves;
+	int upMoves;
+	int downMoves;
+
+	string holderName = "Holder";
+	GameObject holderObject;
+	int myHolderIndex;
+	float holderScale;
+	Transform[] holderTransforms;
+	bool hasInitializedHolder = false;
+	int initializedHolderCounter;
 
 	bool hasPath;
 	Vector2 pathPosition;
@@ -31,14 +45,14 @@ public class SamKar : IRandomWalker
 		width = playAreaWidth;
 		height = playAreaHeight;
 
-		visited = new bool[width * height];
+		visited = new int[width * height];
 
 		float x = Random.Range(0 + width * 0.25f, playAreaWidth * 0.75f);
 		float y = Random.Range(0 + height * 0.25f, playAreaHeight * 0.75f);
 		x = Mathf.FloorToInt(x);
 		y = Mathf.FloorToInt(y);
 		currentPos = new Vector2(x,y);
-		visited[VisitedIndex(x, y)] = true;
+		visited[VisitedIndex(x, y)] = -1;
 		totalVisits++;
 
 		//a PVector holds floats but make sure its whole numbers that are returned!
@@ -47,7 +61,12 @@ public class SamKar : IRandomWalker
 
 	public Vector2 Movement()
 	{
-		Debug.Log(pathPosition);
+		initializedHolderCounter++;
+		if (!hasInitializedHolder && initializedHolderCounter >= 10)
+		{
+			InitializeHolderProperties();
+            hasInitializedHolder = true;
+		}
 		if(hasPath)
         {
 			Vector2 pathMovement = StepTowardsPathDestination();
@@ -65,178 +84,98 @@ public class SamKar : IRandomWalker
 
 		float distanceFromCenter = Vector2.Distance(new Vector2(width / 2, height / 2), currentPos);
 		distanceFromCenter /= Mathf.Min(width, height);
-
-		float leftScore = distanceFromCenter - (Vector2.Distance(new Vector2(width / 2, height / 2), currentPos + new Vector2(-1,0))) / Mathf.Min(width, height);
-		leftScore += 1;
-		leftScore = Mathf.Pow(leftScore, cirlceFormingFactor);
-		float rightScore = distanceFromCenter - (Vector2.Distance(new Vector2(width / 2, height / 2), currentPos + new Vector2(1, 0))) / Mathf.Min(width, height);
-		rightScore += 1;
-		rightScore = Mathf.Pow(rightScore, cirlceFormingFactor);
-		float upScore = distanceFromCenter - (Vector2.Distance(new Vector2(width / 2, height / 2), currentPos + new Vector2(0, 1))) / Mathf.Min(width, height);
-		upScore +=  1;
-		upScore = Mathf.Pow(upScore, cirlceFormingFactor);
-		float downScore = distanceFromCenter - (Vector2.Distance(new Vector2(width / 2, height / 2), currentPos + new Vector2(0, -1))) / Mathf.Min(width, height);
-		downScore += 1;
-		downScore = Mathf.Pow(downScore, cirlceFormingFactor);
-
-  //      float xStrength = 0;
-  //      float left = 2;
-
-  //      float yStrength = 0;
-  //      float down = 2;
-
-  //      if (xPercent < 0.5f)
-  //      {
-  //          xStrength = Mathf.Pow(1 - (Mathf.Abs(0.25f - xPercent)), 1);
-  //          if (xPercent > 0.25)
-  //          {
-  //              left = 0.5f;
-  //          }
-  //      }
-  //      else if (xPercent >= 0.5f)
-  //      {
-  //          xStrength = Mathf.Pow(1 - (Mathf.Abs(0.75f - xPercent)), 1);
-  //          if (xPercent < 0.75)
-  //          {
-  //              left = 0.5f;
-  //          }
-  //      }
-
-  //      if (yPercent < 0.5f)
-  //      {
-  //          yStrength = Mathf.Pow(1 - (Mathf.Abs(0.25f - yPercent)), 1);
-  //          if (yPercent > 0.25)
-  //          {
-  //              down = 0.5f;
-  //          }
-  //      }
-  //      else if (yPercent >= 0.5f)
-  //      {
-  //          yStrength = Mathf.Pow(1 - (Mathf.Abs(0.75f - yPercent)), 1);
-  //          if (yPercent < 0.75)
-  //          {
-  //              down = 0.5f;
-  //          }
-  //      }
-  //      left = 1;
-		//xStrength = 1;
-		//down = 1;
-		//yStrength = 1;
-
-        float leftWeight = (1f / (1f + (leftValue/totalVisits)));
-		float rightWeight = (1f / (1f + (rightValue / totalVisits)));
-		float downWeight = (1f / (1f + (downValue / totalVisits)));
-		float upWeight = (1f / (1f + (upValue / totalVisits)));
-		float totalWeight = leftWeight + rightWeight + downWeight + upWeight;
-		float value = Random.value * totalWeight;
-
-		if (value < leftWeight)
+		if (hasInitializedHolder)
 		{
-			move = new Vector2(-1, 0);
-		}
-		else if (value < rightWeight + leftWeight)
-		{
-			move = new Vector2(1, 0);
-		}
-		else if (value < upWeight + rightWeight + leftWeight)
-		{
-			move = new Vector2(0, 1);
-		}
-		else
-		{
-			move = new Vector2(0, -1);
-		}
-		int attempts = 0;
-		while ((currentPos + move).x < 0 || (currentPos + move).x > width || (currentPos + move).y < 0 || (currentPos + move).y > height )
-		{
-			while (visited[VisitedIndex((currentPos + move).x, (currentPos + move).y)])
+			Vector2 closestEnemy = GetPosOfClosestEnemy();
+			float scaredDistance = 5;
+			float leftScore = visited[VisitedIndex(currentPos + new Vector2(-1, 0))];
+			if (Vector2.Distance(closestEnemy, currentPos) > Vector2.Distance(closestEnemy, currentPos + new Vector2(-1, 0)))
 			{
-				attempts++;
-				if (attempts >= 100)
-				{
-					GetNewPath();
-					move = StepTowardsPathDestination();
-					break;
-				}
-				value = Random.value * totalWeight;
+				leftScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Vector2.Distance(closestEnemy, currentPos + new Vector2(-1, 0))), scaredDistance)-1;
+			}
+			float rightScore = visited[VisitedIndex(currentPos + new Vector2(1, 0))];
+			if (Vector2.Distance(closestEnemy, currentPos) > Vector2.Distance(closestEnemy, currentPos + new Vector2(1, 0)))
+			{
+				rightScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Vector2.Distance(closestEnemy, currentPos + new Vector2(1, 0))), scaredDistance)-1;
+			}
+			float upScore = visited[VisitedIndex(currentPos + new Vector2(0, 1))];
+			if (Vector2.Distance(closestEnemy, currentPos) > Vector2.Distance(closestEnemy, currentPos + new Vector2(0, 1)))
+			{
+				upScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Vector2.Distance(closestEnemy, currentPos + new Vector2(0, 1))), scaredDistance)-1;
+			}
+			float downScore = visited[VisitedIndex(currentPos + new Vector2(0, -1))];
+			if (Vector2.Distance(closestEnemy, currentPos) > Vector2.Distance(closestEnemy, currentPos + new Vector2(0, -1)))
+			{
+				downScore -= Mathf.Pow((Vector2.Distance(closestEnemy, currentPos) / Vector2.Distance(closestEnemy, currentPos + new Vector2(0, -1))), scaredDistance)-1;
+			}
 
-				if (value < leftWeight)
-				{
+			float[] scores = new float[] { leftScore, rightScore, upScore, downScore };
+			Debug.Log($"left:{leftScore} right{rightScore} up{upScore} down{downScore}");
+			int largest = FindLargestInArray(scores);
+			switch (largest)
+			{
+				case 0:
 					move = new Vector2(-1, 0);
-				}
-				else if (value < rightWeight + leftWeight)
-				{
+					break;
+				case 1:
 					move = new Vector2(1, 0);
-				}
-				else if (value < upWeight + rightWeight + leftWeight)
-				{
+					break;
+				case 2:
 					move = new Vector2(0, 1);
-				}
-				else
-				{
+					break;
+				default:
 					move = new Vector2(0, -1);
-				}
+					break;
 			}
 		}
+		float value;
+		int attempts = 0;
+		while ((currentPos + move).x < 0 || (currentPos + move).x > width || (currentPos + move).y < 0 || (currentPos + move).y > height || visited[VisitedIndex((currentPos + move).x, (currentPos + move).y)] < 0)
+		{
+			attempts++;
+			if (attempts >= 100)
+			{
+				GetNewPath();
+				move = StepTowardsPathDestination();
+				break;
+			}
+            value = Random.Range(0, 4);
+
+            if (value == 0)
+            {
+                move = new Vector2(1, 0);
+            }
+            else if (value == 1)
+            {
+                move = new Vector2(-1, 0);
+            }
+            else if (value == 2)
+            {
+                move = new Vector2(0, 1);
+            }
+            else if (value == 3)
+            {
+                move = new Vector2(0, -1);
+            }
+        }
 		//while(((currentPos + move).x < 0 || (currentPos + move).x > width || (currentPos + move).y < 0 || (currentPos + move).y > height)
+		if(hasInitializedHolder)
+		{
+			GetObjectsInHolder();
+		}
+		Debug.Log(TilesOwned());
 		UpdateDirValues(move);
 		return move;
 	}
 
 	private void UpdateDirValues(Vector2 dir)
     {
-		if(dir.x == -1)
-        {
-			int rightValueToAdd = 0;
-			for(int i = 0; i < height; i++)
-            {
-				if(visited[VisitedIndex(currentPos.x - 1, i)])
-                {
-					rightValueToAdd++;
-                }
-            }
-			rightValue += rightValueToAdd;
-        }
-		if (dir.x == 1)
-		{
-			int leftValueToAdd = 0;
-			for (int i = 0; i < height; i++)
-			{
-				if (visited[VisitedIndex(currentPos.x + 1, i)])
-				{
-					leftValueToAdd++;
-				}
-			}
-			leftValue += leftValueToAdd;
-		}
-		if (dir.y == -1)
-		{
-			int upValueToAdd = 0;
-			for (int i = 0; i < width; i++)
-			{
-				if (visited[VisitedIndex(i, currentPos.y -1)])
-				{
-					upValueToAdd++;
-				}
-			}
-			upValue += upValueToAdd;
-		}
-		if (dir.x == 1)
-		{
-			int downValueToAdd = 0;
-			for (int i = 0; i < width; i++)
-			{
-				if (visited[VisitedIndex(i, currentPos.y + 1)])
-				{
-					downValueToAdd++;
-				}
-			}
-			downValue += downValueToAdd;
-		}
-
 		currentPos += dir;
-		visited[VisitedIndex(currentPos.x, currentPos.y)] = true;
-		totalVisits++;
+		if (visited[VisitedIndex(currentPos.x, currentPos.y)] != -1)
+		{
+			totalVisits++;
+		}
+		visited[VisitedIndex(currentPos.x, currentPos.y)] = -1;
 	}
 
 	private void GetNewPath()
@@ -246,8 +185,8 @@ public class SamKar : IRandomWalker
 		while(!pathFound)
         {
 			counter++;
-			Vector2 attemptedPath = new Vector2(Random.Range(Mathf.Max(currentPos.x - (counter * 3),0), Mathf.Min(currentPos.x + (counter * 3),width)), Random.Range(Mathf.Max(currentPos.y - (counter * 3),0), Mathf.Min(currentPos.y + (counter * 3),height)));
-			if(!visited[VisitedIndex(attemptedPath.x,attemptedPath.y)])
+			Vector2 attemptedPath = new Vector2(Random.Range(Mathf.Max(currentPos.x - (counter * 3),0), Mathf.Min(currentPos.x + (counter * 3),width)+1), Random.Range(Mathf.Max(currentPos.y - (counter * 3),0), Mathf.Min(currentPos.y + (counter * 3),height)+1));
+			if(visited[VisitedIndex(attemptedPath.x,attemptedPath.y)] != -1)
             {
 				attemptedPath.x = Mathf.FloorToInt(attemptedPath.x);
 				attemptedPath.y = Mathf.FloorToInt(attemptedPath.y);
@@ -256,6 +195,13 @@ public class SamKar : IRandomWalker
 				pathFound = true;
 				return;
             }
+			if(counter >= 200)
+			{
+				for(int i = 0; i< visited.Length; i++)
+				{
+					visited[i] = 0;
+				}
+			}
         }
     }
 
@@ -294,10 +240,128 @@ public class SamKar : IRandomWalker
 	{
 		int ix = Mathf.FloorToInt(x);
 		int iy = Mathf.FloorToInt(y);
-		if ((iy * width) + ix > visited.Length || (iy * width) + ix < 0)
-        {
-			return 0;
-        }
+		if(ix >= width)
+		{
+			ix = width-1;
+		}
+		if(iy >= height)
+		{
+			iy = height-1;
+		}
+		ix = Mathf.Max(ix, 0);
+		iy = Mathf.Max(iy, 0);
 		return (iy * width) + ix;
+	}
+    private int VisitedIndex(Vector2 position)
+    {
+        int ix = Mathf.FloorToInt(position.x);
+        int iy = Mathf.FloorToInt(position.y);
+        if (ix >= width)
+        {
+            ix = width - 1;
+        }
+        if (iy >= height)
+        {
+            iy = height - 1;
+        }
+        ix = Mathf.Max(ix, 0);
+        iy = Mathf.Max(iy, 0);
+        return (iy * width) + ix;
+    }
+
+    private void InitializeHolderProperties()
+	{
+        Transform[] childTransforms = GameObject.Find("Holder").GetComponentsInChildren<Transform>();
+		holderTransforms = childTransforms;
+		bool foundScale = false;
+		for (int scale = 0; scale < 100; scale++)
+		{
+            for (int i = 1; i < childTransforms.Length; i++)
+			{
+				if (IsSimilar(childTransforms[i].localPosition.x / (0.005f * scale),currentPos.x) && IsSimilar(childTransforms[i].localPosition.y / (0.005f * scale),currentPos.y))
+				{
+					holderScale = scale * 0.005f;
+					myHolderIndex = i;
+					foundScale = true;
+					break;
+				}
+			}
+			if(foundScale)
+			{
+				Debug.Log("Scale " + holderScale);
+				break;
+			}
+		}
+    }
+
+	private void GetObjectsInHolder()
+	{
+		for(int i = 1; i < holderTransforms.Length; i++)
+		{
+			if (i != myHolderIndex)
+			{
+				if (visited[VisitedIndex(holderTransforms[i].localPosition / holderScale)] != 1)
+				{
+					visited[VisitedIndex(holderTransforms[i].localPosition / holderScale)] = 1;
+				}
+
+			}
+		}
+	}
+
+	private Vector2 GetPosOfClosestEnemy()
+	{
+		Vector2 closestEnemy = new Vector2();
+		float closestDist = 9999;
+        for (int i = 1; i < holderTransforms.Length; i++)
+        {
+            if (i != myHolderIndex)
+            {
+				if (Vector2.Distance(holderTransforms[i].localPosition / holderScale,currentPos) < closestDist)
+				{
+					closestDist = Vector2.Distance(holderTransforms[i].localPosition / holderScale, currentPos);
+					closestEnemy = holderTransforms[i].localPosition / holderScale;
+
+                }
+            }
+        }
+		return closestEnemy;
+    }
+
+	private int TilesOwned()
+	{
+		int count = 0;
+		for(int i = 0; i < visited.Length; i++)
+		{
+			if (visited[i] == -1)
+			{
+				count++;
+			}
+		}
+		return count;
+	}
+
+    private bool IsSimilar(float a, float b)
+	{
+		if(a - b < 0.001f && a - b > -0.001f)
+		{
+			return true;
+		}
+		else return false;
+	}
+
+	private int FindLargestInArray(float[] arr)
+	{
+		float largest = -9999999f;
+		int largestIndex = 0;
+		for(int i = 0; i < arr.Length; i++)
+		{
+			if (arr[i] > largest)
+			{
+				largest = arr[i];
+				largestIndex = i;
+			}
+		}
+		return largestIndex;
 	}
 }

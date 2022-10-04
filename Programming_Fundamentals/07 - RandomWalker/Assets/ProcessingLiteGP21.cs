@@ -14,7 +14,7 @@ namespace ProcessingLite
 	/// </summary>
 	public class GP21 : MonoBehaviour
 	{
-		public const int MAXNumberOfObjects = 1000;
+		public const int MAXNumberOfObjects = 10000;
 		private const float PointSize = 0.02f;
 
 		public static float PStrokeWeight = 1;           //Processing
